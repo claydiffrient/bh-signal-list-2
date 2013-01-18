@@ -20,8 +20,14 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+import javafx.stage.Popup;
 import javafx.geometry.Pos;
 import javafx.geometry.Insets;
+import javafx.collections.ObservableList;
+import javafx.collections.FXCollections;
+import java.util.Arrays;
+import java.util.regex.Pattern;
+import java.util.prefs.Preferences;
 
 
 /**
@@ -59,6 +65,26 @@ public class Start
    ChoiceBox mDomain;
 
    /**
+    * Preferences object.
+    */
+   private Preferences mAvailDomains;
+
+   /**
+    * Holds list of domains
+    */
+   DomainListing mDomainList;
+
+   /**
+    * Holds settings window.
+    */
+   Settings mSettingsWindow;
+
+   /**
+    * Holds Threads window.
+    */
+   ThreadsWindow mThreadsWindow;
+
+   /**
     * start
     *
     * Contains the initialization parameters to start the application.
@@ -67,6 +93,22 @@ public class Start
     */
    public void start(Stage primaryStage)
    {
+      mAvailDomains = Preferences.userRoot().node("bh-signal-downloader");
+      mDomainList = DomainListing.getInstance();
+      String[] keys = null;
+      try
+      {
+         keys = mAvailDomains.keys();
+      }
+      catch (Exception e)
+      {
+         System.out.println("Error getting preferences" + e.getMessage());
+      }
+      for (int i = 0; i < keys.length; i++)
+      {
+         String result = mAvailDomains.get(keys[i], "Nothing");
+         mDomainList.addAll(result);
+      }
       BorderPane rootPanel = new BorderPane();
       HBox title = generateTitleBox();
       BorderPane.setAlignment(title, Pos.CENTER);
@@ -75,7 +117,10 @@ public class Start
       GridPane inputElements = generateInputElements();
       BorderPane.setMargin(inputElements, new Insets(0,10,0,30));
       rootPanel.setCenter(inputElements);
-      primaryStage.setScene(new Scene(rootPanel, 400, 350));
+      HBox buttons = generateButtonBox();
+      BorderPane.setMargin(buttons, new Insets(10,10,10,125));
+      rootPanel.setBottom(buttons);
+      primaryStage.setScene(new Scene(rootPanel, 400, 250));
       primaryStage.setTitle("Signal List Downloader 2");
       primaryStage.show();
    }
@@ -105,6 +150,7 @@ public class Start
       mLastSignal.setPrefColumnCount(15);
       Label domain = new Label("Domain:");
       mDomain = new ChoiceBox();
+      mDomain.setItems(mDomainList.getList());
       mDomain.setPrefWidth(200);
       GridPane.setConstraints(user, 0,0);
       GridPane.setConstraints(mUserName, 1, 0);
@@ -126,6 +172,35 @@ public class Start
    }
 
    /**
+    * generateButtonBox
+    *
+    * Creates the button portion
+    * @return HBox
+    */
+   private HBox generateButtonBox()
+   {
+      HBox buttonBox = new HBox(10);
+      Button quitButton = new Button("Exit");
+      quitButton.setOnAction(new EventHandler<ActionEvent>()
+      {
+         public void handle(ActionEvent ae)
+         {
+            System.exit(0);
+         }
+      });
+      Button getSignals = new Button("Get Signals");
+      getSignals.setOnAction(new EventHandler<ActionEvent>(){
+         public void handle(ActionEvent ae)
+         {
+            getSignals();
+         }
+      });
+      getSignals.setDefaultButton(true);
+      buttonBox.getChildren().addAll(quitButton, getSignals);
+      return buttonBox;
+   }
+
+   /**
     * generateTitleBox
     *
     * Creates the heading portion of the application.
@@ -143,15 +218,55 @@ public class Start
       settingsButton.setPrefSize(10, 10);
       settingsButton.setTooltip(new Tooltip("Settings"));
       //Add action listener for the settings button.
-      settingsButton.setOnAction(new EventHandler<ActionEvent>(){
+      settingsButton.setOnAction(new EventHandler<ActionEvent>()
+      {
         public void handle(ActionEvent ae)
         {
-           new Settings().run();
+           if (mSettingsWindow == null)
+           {
+              mSettingsWindow = new Settings();
+              mSettingsWindow.run();
+           }
+           else
+           {
+              mSettingsWindow.show();
+           }
+
         }
       });
 
       titleBox.getChildren().addAll(title, settingsButton);
       return titleBox;
+   }
+
+   /**
+    * getSignals
+    */
+   private void getSignals()
+   {
+      if (mThreadsWindow == null)
+      {
+         mThreadsWindow = new ThreadsWindow();
+         mThreadsWindow.run();
+      }
+      else
+      {
+         mThreadsWindow.show();
+      }
+      String selected = (String) mDomain.getValue();
+      String username = mUserName.getText();
+      String password = mPassword.getText();
+      String lastSignal = mLastSignal.getText();
+      //Set defaults
+      if (username.isEmpty())
+      {
+         username = "byui/marsh3";
+      }
+      if (lastSignal.isEmpty())
+      {
+         lastSignal = "0";
+      }
+      mThreadsWindow.startReport(selected,  username,  password, lastSignal);
    }
 
    /**

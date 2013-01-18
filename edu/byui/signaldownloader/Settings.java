@@ -2,6 +2,7 @@
 
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.stage.Modality;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.GridPane;
 import javafx.scene.control.TextField;
@@ -13,6 +14,8 @@ import javafx.geometry.Insets;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import java.util.prefs.Preferences;
+import javafx.collections.ObservableList;
+import javafx.collections.FXCollections;
 
 /**
  * Settings
@@ -43,7 +46,12 @@ public class Settings
    /**
     * Preferences object.
     */
-   private Preferences availDomains = Preferences.systemNodeForPackage(Settings.class);
+   private Preferences mAvailDomains;
+
+   /**
+    * Holds domain list
+    */
+   DomainListing mDomainList;
 
    /**
     * Constructor
@@ -51,6 +59,10 @@ public class Settings
     */
    public Settings()
    {
+
+      mAvailDomains = Preferences.userRoot().node("bh-signal-downloader");
+      mDomainList = DomainListing.getInstance();
+
       //Create the Title HBox
       HBox title = new HBox();
       Label titleLabel = new Label("Configure Domains");
@@ -78,6 +90,7 @@ public class Settings
       //Create the remove fields HBox
       HBox remove = new HBox(10);
       mDomains = new ChoiceBox();
+      mDomains.setItems(mDomainList.getList());
       mDomains.setPrefWidth(250);
       Button removeDomain = new Button("Remove Domain");
       removeDomain.setOnAction(new EventHandler<ActionEvent>()
@@ -126,7 +139,19 @@ public class Settings
     */
    private void addDomain()
    {
-      System.out.println("Called");
+      String domain = mIdentifier.getText();
+      String id = mDomainId.getText();
+      String value = domain + ":" + id;
+      mAvailDomains.put(domain + id , value);
+      mDomainList.addAll(value);
+      try
+      {
+         mAvailDomains.flush();
+      }
+      catch (Exception e)
+      {
+         System.out.println("Error saving preferences" + e.getMessage());
+      }
    }
 
    /**
@@ -135,7 +160,10 @@ public class Settings
     */
    private void removeDomain()
    {
-      System.out.println("Remove Called");
+      String selected = (String) mDomains.getValue();
+      String[] data = selected.split(":");
+      mAvailDomains.remove(data[0] + data[1]);
+      mDomainList.remove(selected);
    }
 
    /**
@@ -143,6 +171,7 @@ public class Settings
     */
    public void run()
    {
+      initModality(Modality.APPLICATION_MODAL);
       show();
    }
 }
