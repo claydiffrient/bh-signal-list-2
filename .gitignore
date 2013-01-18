@@ -4,3 +4,6 @@
 *.jar
 *.war
 *.ear
+/SignalDownloader/nbproject/private/
+/SignalDownloader/build/
+/SignalDownloader/dist/
